@@ -1,0 +1,32 @@
+# Firebase
+functions/lib/
+functions/node_modules/
+
+# Flutter
+flutter/.dart_tool/
+flutter/.flutter-plugins
+flutter/.flutter-plugins-dependencies
+flutter/build/
+flutter/.packages
+flutter/pubspec.lock
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Secrets — never commit these
+google-services.json
+GoogleService-Info.plist
+.env
+.env.*
+firebase_options.dart
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.iml
