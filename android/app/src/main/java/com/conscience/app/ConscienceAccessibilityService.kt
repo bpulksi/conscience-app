@@ -2,10 +2,14 @@ package com.conscience.app
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
+import androidx.core.content.LocalBroadcastManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -13,6 +17,8 @@ class ConscienceAccessibilityService : AccessibilityService() {
 
     companion object {
         const val ACTION_AVATAR_UPDATE = "com.conscience.app.AVATAR_UPDATE"
+        const val ACTION_RESET = "com.conscience.app.RESET"
+        const val ACTION_GRANT_EXT = "com.conscience.app.GRANT_EXT"
         const val EXTRA_STAGE = "stage"
         const val EXTRA_ELAPSED_MS = "elapsedMs"
 
@@ -32,6 +38,7 @@ class ConscienceAccessibilityService : AccessibilityService() {
     private var sessionStartMs = 0L
     private var totalUsageTodayMs = 0L
     private var overlayManager: OverlayManager? = null
+    private var commandReceiver: BroadcastReceiver? = null
 
     override fun onServiceConnected() {
         serviceInfo = serviceInfo.apply {
@@ -41,6 +48,34 @@ class ConscienceAccessibilityService : AccessibilityService() {
             notificationTimeout = 500
         }
         overlayManager = OverlayManager(this)
+
+        // Register for MainActivity signals
+        commandReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                when (intent.action) {
+                    ACTION_RESET -> {
+                        totalUsageTodayMs = 0L
+                        currentVicePackage = ""
+                        handler.removeCallbacks(monitorRunnable)
+                        overlayManager?.dismissOverlay()
+                    }
+                    ACTION_GRANT_EXT -> {
+                        val durationMs = intent.getLongExtra("durationMs", 10 * 60 * 1000)
+                        overlayManager?.dismissOverlay()
+                        handler.postDelayed({
+                            if (currentVicePackage.isNotEmpty()) {
+                                handler.post(monitorRunnable)
+                            }
+                        }, durationMs)
+                    }
+                }
+            }
+        }
+        val filter = IntentFilter().apply {
+            addAction(ACTION_RESET)
+            addAction(ACTION_GRANT_EXT)
+        }
+        LocalBroadcastManager.getInstance(this).registerReceiver(commandReceiver!!, filter)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -137,6 +172,10 @@ class ConscienceAccessibilityService : AccessibilityService() {
         accumulateSession()
         handler.removeCallbacks(monitorRunnable)
         overlayManager?.dismissOverlay()
+        if (commandReceiver != null) {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(commandReceiver!!)
+            commandReceiver = null
+        }
     }
 }
 
