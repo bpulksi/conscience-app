@@ -11,6 +11,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: Production – bpulksi-conscience-app
+    permissions:
+      contents: write
+
+    env:
+      FLUTTER_VERSION: 3.19.0
 
     steps:
       - uses: actions/checkout@e2f20aa261021e5a93ff3b1405afb1e22aadc7ee  # v4
@@ -22,10 +27,15 @@ jobs:
           java-version: '11'
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@44ac965b12debe3b76c5f68d7879891b3cfe58f9  # v2
-        with:
-          flutter-version: '3.19.0'
-          channel: 'stable'
+        run: |
+          set -euo pipefail
+          FLUTTER_DIR="$HOME/flutter"
+          curl -fsSL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" -o /tmp/flutter.tar.xz
+          mkdir -p "$FLUTTER_DIR"
+          tar -xJf /tmp/flutter.tar.xz -C "$HOME"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+          "$HOME/flutter/bin/flutter" --version
+          "$HOME/flutter/bin/flutter" config --no-analytics
 
       - name: Decode Keystore
         env:
@@ -63,27 +73,33 @@ jobs:
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@de2c0eb89ae2a2524e593c34293f78a9c1479fbf  # v1
-        with:
-          files: flutter/build/app/outputs/flutter-app.apk
-          tag_name: v0.1.0-build-${{ github.run_number }}
-          body: |
-            **Conscience Android APK - Build ${{ github.run_number }}**
-
-            Built from commit: ${{ github.sha }}
-
-            ### Installation
-            1. Download `flutter-app.apk`
-            2. Transfer to Android device or use `adb install flutter-app.apk`
-            3. Grant permissions when prompted
-
-            ### Testing
-            - Onboarding: Grant Accessibility Service permission
-            - Home: Configure daily limit and monitor apps
-            - Recharge: Complete wellness sessions to earn coins
-
-            [View commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-          draft: false
-          prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v0.1.0-build-${{ github.run_number }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          NOTES_FILE="$(mktemp)"
+          cat > "$NOTES_FILE" <<EOF
+          **Conscience Android APK - Build ${RUN_NUMBER}**
+
+          Built from commit: ${SHA}
+
+          ### Installation
+          1. Download \`flutter-app.apk\`
+          2. Transfer to Android device or use \`adb install flutter-app.apk\`
+          3. Grant permissions when prompted
+
+          ### Testing
+          - Onboarding: Grant Accessibility Service permission
+          - Home: Configure daily limit and monitor apps
+          - Recharge: Complete wellness sessions to earn coins
+
+          [View commit](https://github.com/${REPO}/commit/${SHA})
+          EOF
+          gh release create "$TAG" \
+            flutter/build/app/outputs/flutter-app.apk \
+            --title "$TAG" \
+            --notes-file "$NOTES_FILE"
