@@ -29,64 +29,48 @@ jobs:
       - name: Set up Flutter
         run: |
           set -euo pipefail
-          FLUTTER_DIR="$HOME/flutter"
           curl -fsSL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" -o /tmp/flutter.tar.xz
-          mkdir -p "$FLUTTER_DIR"
           tar -xJf /tmp/flutter.tar.xz -C "$HOME"
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
           "$HOME/flutter/bin/flutter" --version
           "$HOME/flutter/bin/flutter" config --no-analytics
 
-      - name: Link android project into flutter/
+      - name: Write local.properties
         run: |
-          set -euo pipefail
-          # Flutter expects android/ as a sibling of pubspec.yaml
-          ln -sfn "$(pwd)/android" flutter/android
-          # Write local.properties pointing Gradle at the Flutter SDK and Android SDK
           cat > flutter/android/local.properties <<EOF
           flutter.sdk=$HOME/flutter
           sdk.dir=$ANDROID_HOME
           flutter.versionName=0.1.0
           flutter.versionCode=${{ github.run_number }}
           EOF
-          ls -la flutter/android/
 
       - name: Write keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           set -euo pipefail
-          mkdir -p android/app
-          # Try to decode as base64; if it fails, treat as raw binary (hex-encoded as fallback)
-          if printf '%s' "$KEYSTORE_BASE64" | base64 -d > android/app/keystore.jks 2>/dev/null; then
+          if printf '%s' "$KEYSTORE_BASE64" | base64 -d > flutter/android/app/keystore.jks 2>/dev/null; then
             echo "Keystore decoded from base64"
           else
-            echo "::warning::KEYSTORE_BASE64 is not valid base64. Attempting hex decode..."
-            printf '%s' "$KEYSTORE_BASE64" | xxd -r -p > android/app/keystore.jks 2>/dev/null || {
-              echo "::error::Failed to decode KEYSTORE_BASE64 as base64 or hex"
+            printf '%s' "$KEYSTORE_BASE64" | xxd -r -p > flutter/android/app/keystore.jks || {
+              echo "::error::Failed to decode KEYSTORE_BASE64"
               exit 1
             }
           fi
-          # Sanity check: keystore should be a Java KeyStore file (magic bytes PK for ZIP)
-          head -c 2 android/app/keystore.jks | od -An -tx1 | grep -q 'pk' || {
-            echo "::warning::Keystore does not start with expected magic bytes; may be invalid"
-          }
-          ls -lh android/app/keystore.jks
+          ls -lh flutter/android/app/keystore.jks
 
       - name: Write google-services.json
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           set -euo pipefail
-          # Accept either raw JSON or base64-encoded JSON
           if printf '%s' "$GOOGLE_SERVICES_JSON" | head -c1 | grep -q '{'; then
-            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            printf '%s' "$GOOGLE_SERVICES_JSON" > flutter/android/app/google-services.json
           else
-            printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+            printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > flutter/android/app/google-services.json
           fi
-          # Sanity check
-          head -c 1 android/app/google-services.json | grep -q '{' || {
-            echo "::error::google-services.json is not valid JSON after decoding"
+          head -c1 flutter/android/app/google-services.json | grep -q '{' || {
+            echo "::error::google-services.json is not valid JSON"
             exit 1
           }
 
@@ -110,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: app-release
-          path: flutter/build/app/outputs/flutter-app.apk
+          path: flutter/build/app/outputs/flutter-apk/app-release.apk
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -129,8 +113,8 @@ jobs:
           Built from commit: ${SHA}
 
           ### Installation
-          1. Download \`flutter-app.apk\`
-          2. Transfer to Android device or use \`adb install flutter-app.apk\`
+          1. Download \`app-release.apk\`
+          2. Transfer to Android device or use \`adb install app-release.apk\`
           3. Grant permissions when prompted
 
           ### Testing
@@ -141,6 +125,6 @@ jobs:
           [View commit](https://github.com/${REPO}/commit/${SHA})
           EOF
           gh release create "$TAG" \
-            flutter/build/app/outputs/flutter-app.apk \
+            flutter/build/app/outputs/flutter-apk/app-release.apk \
             --title "$TAG" \
             --notes-file "$NOTES_FILE"
