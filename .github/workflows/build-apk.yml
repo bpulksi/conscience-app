@@ -37,6 +37,20 @@ jobs:
           "$HOME/flutter/bin/flutter" --version
           "$HOME/flutter/bin/flutter" config --no-analytics
 
+      - name: Link android project into flutter/
+        run: |
+          set -euo pipefail
+          # Flutter expects android/ as a sibling of pubspec.yaml
+          ln -sfn "$(pwd)/android" flutter/android
+          # Write local.properties pointing Gradle at the Flutter SDK and Android SDK
+          cat > flutter/android/local.properties <<EOF
+          flutter.sdk=$HOME/flutter
+          sdk.dir=$ANDROID_HOME
+          flutter.versionName=0.1.0
+          flutter.versionCode=${{ github.run_number }}
+          EOF
+          ls -la flutter/android/
+
       - name: Write keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
