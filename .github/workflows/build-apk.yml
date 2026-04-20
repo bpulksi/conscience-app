@@ -13,16 +13,16 @@ jobs:
     environment: Production – bpulksi-conscience-app
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@e2f20aa261021e5a93ff3b1405afb1e22aadc7ee  # v4
 
       - name: Set up Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@99b8673ff64fbf33d533d7d1915dce4fd614aef1  # v3
         with:
           distribution: 'temurin'
           java-version: '11'
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@44ac965b12debe3b76c5f68d7879891b3cfe58f9  # v2
         with:
           flutter-version: '3.19.0'
           channel: 'stable'
@@ -56,14 +56,14 @@ jobs:
             --build-number=${{ github.run_number }}
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@c7d193f32eddeabc2f90a21e3386495c3a96d0cb  # v4
         with:
           name: app-release
           path: flutter/build/app/outputs/flutter-app.apk
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@de2c0eb89ae2a2524e593c34293f78a9c1479fbf  # v1
         with:
           files: flutter/build/app/outputs/flutter-app.apk
           tag_name: v0.1.0-build-${{ github.run_number }}
