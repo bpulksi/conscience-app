@@ -115,11 +115,10 @@ class ConscienceAccessibilityService : AccessibilityService() {
                 putExtra(EXTRA_ELAPSED_MS, combinedMs)
             })
 
-            // If over daily limit, write to Firestore and trigger block
+            // If over daily limit, write to Firestore. Overlay stays in FURIOUS stage.
             if (combinedMs >= dailyLimitMs) {
                 writeUsageToFirestore(combinedMs)
-                triggerHardBlock()
-                return // stop polling after block
+                return // stop polling after limit
             }
 
             handler.postDelayed(this, 30_000L)
@@ -140,15 +139,6 @@ class ConscienceAccessibilityService : AccessibilityService() {
             totalUsageTodayMs += System.currentTimeMillis() - sessionStartMs
             sessionStartMs = 0
         }
-    }
-
-    private fun triggerHardBlock() {
-        // Launch Conscience block activity over the vice app
-        val blockIntent = Intent(this, BlockActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        }
-        startActivity(blockIntent)
     }
 
     private fun writeUsageToFirestore(totalMs: Long) {

@@ -43,15 +43,6 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- Block activity (overlay) -->
-        <activity
-            android:name=".BlockActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:showOnLockScreen="true"
-            android:taskAffinity=""
-            android:theme="@style/Theme.Translucent" />
-
     </application>
 
 </manifest>
