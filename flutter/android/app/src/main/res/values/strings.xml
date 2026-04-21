@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Conscience</string>
+    <string name="accessibility_service_description">Conscience monitors your app usage to help you build better digital habits. Grant Accessibility Service permission to enable screen time tracking and app blocking.</string>
+</resources>
