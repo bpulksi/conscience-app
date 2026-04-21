@@ -22,4 +22,9 @@
         <item name="android:windowShowWallpaper">false</item>
         <item name="android:windowAnimationStyle">@null</item>
     </style>
+
+    <!-- Material Button style for BlockActivity -->
+    <style name="Widget.MaterialComponents.Button.OutlinedButton" parent="@android:style/Widget.Button">
+        <item name="android:textColor">@android:color/white</item>
+    </style>
 </resources>
