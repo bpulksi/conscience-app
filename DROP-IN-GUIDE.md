@@ -6,12 +6,18 @@ After exporting your Stitch project, follow these steps to integrate the native 
 
 ## 1. Firebase Cloud Functions
 
+Run these from the repo root. They need Node 22, the Firebase CLI, and a Firebase project with Auth, Firestore and Cloud Messaging enabled. Cloud Functions also requires the Blaze plan.
+
 ```bash
-cd conscience-phase2/functions
-npm install
-npm run build
-firebase deploy --only functions
+firebase use --add
+npm --prefix functions install
+npm --prefix functions test
+firebase deploy --only firestore,functions
 ```
+
+This deploys the functions, `firestore.rules` and `firestore.indexes.json`. A new composite index can take a few minutes to build, and `requestExtension` fails until it's ready.
+
+The app must save each device's push token to `users/{uid}.fcmToken` using `firebase_messaging`, or partners won't get notifications.
 
 ---
 
@@ -29,7 +35,6 @@ dependencies:
   cloud_functions: ^4.7.0
   cloud_firestore: ^4.17.0
   firebase_auth: ^4.20.0
-  uuid: ^4.4.0
 ```
 
 ---
@@ -153,39 +158,14 @@ if (status == PermissionStatus.needsSettings) {
 
 ## Firestore Security Rules
 
-```js
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
+The rules are in [`firestore.rules`](firestore.rules) and deploy with the functions. Coins, partner links, wellness sessions and approvals can only be changed through Cloud Functions.
 
-    match /users/{uid} {
-      allow read, write: if request.auth.uid == uid;
-      // Partner can read limited fields
-      allow read: if request.auth.uid in resource.data.keys(); // tighten as needed
-    }
+To test the rules and backend on the Firestore emulator (needs Java 21 or newer):
 
-    match /usageStats/{uid}/{document=**} {
-      allow read, write: if request.auth.uid == uid;
-    }
-
-    match /extensionRequests/{reqId} {
-      allow read: if request.auth.uid == resource.data.requesterId
-                  || request.auth.uid == resource.data.partnerId;
-      allow create: if request.auth.uid == request.resource.data.requesterId;
-      allow update: if request.auth.uid == resource.data.partnerId
-                    && request.resource.data.status in ['approved', 'denied'];
-    }
-
-    match /wellnessTokens/{token} {
-      allow create: if request.auth.uid == request.resource.data.uid;
-      allow read: if request.auth.uid == resource.data.uid;
-      // Updates only via Cloud Function (admin SDK bypasses rules)
-    }
-
-    match /inviteCodes/{code} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
-    }
-  }
-}
+```bash
+npm --prefix functions install
+npm --prefix rules-tests install
+npm --prefix rules-tests test
 ```
+
+If the emulator fails on Windows with `Unable to establish loopback connection`, your temp folder path is probably the cause. Create a plain folder such as `C:\jtmp` and set `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\jtmp` before running the tests.

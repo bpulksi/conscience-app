@@ -1,8 +1,5 @@
 import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:uuid/uuid.dart';
 
 enum WellnessSessionType { breathwork, meditation, yoga }
 
@@ -43,37 +40,21 @@ extension WellnessSessionTypeExt on WellnessSessionType {
 
 class WellnessService {
   final _functions = FirebaseFunctions.instance;
-  final _firestore = FirebaseFirestore.instance;
-  final _auth = FirebaseAuth.instance;
-  final _uuid = const Uuid();
 
-  /// Issues a server-side token when a session starts.
-  /// Must be called at session start, not completion, to prevent timing fraud.
-  Future<String> issueSessionToken(WellnessSessionType type) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) throw Exception('Not authenticated');
-
-    final token = _uuid.v4();
-    await _firestore.collection('wellnessTokens').doc(token).set({
-      'uid': uid,
-      'sessionType': type.label,
-      'issuedAt': FieldValue.serverTimestamp(),
-      'claimed': false,
-    });
-    return token;
+  /// Starts a session on the server, which records the start time.
+  /// Call when the session begins. Starting a new one replaces any earlier one.
+  Future<String> startSession(WellnessSessionType type) async {
+    final callable = _functions.httpsCallable('startWellnessSession');
+    final result = await callable.call({'sessionType': type.label});
+    return result.data['sessionToken'] as String;
   }
 
-  /// Calls the Cloud Function to validate and award coins.
-  /// Returns coins awarded, or throws on fraud/error.
-  Future<int> claimReward({
-    required WellnessSessionType type,
-    required String sessionToken,
-  }) async {
+  /// Claims the reward once the session's time is up.
+  /// Returns coins awarded. Throws [FirebaseFunctionsException] if the session
+  /// is too short, expired, replaced or already claimed.
+  Future<int> claimReward({required String sessionToken}) async {
     final callable = _functions.httpsCallable('claimWellnessReward');
-    final result = await callable.call({
-      'sessionType': type.label,
-      'sessionToken': sessionToken,
-    });
+    final result = await callable.call({'sessionToken': sessionToken});
     return result.data['coinsAwarded'] as int;
   }
 }

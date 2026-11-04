@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Anything not matched below is denied, including inviteCodes and
+// approvalBudgets. Cloud Functions use the Admin SDK, which bypasses these
+// rules, so coins, partners, sessions and approvals can only change through them.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isUser(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if isUser(uid);
+
+      // Profiles are created by the onUserCreated function. Owners may change
+      // only their settings, never focusCoins, avatarMood or accountabilityPartner.
+      allow update: if isUser(uid)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['displayName', 'fcmToken', 'toughLove', 'dailyLimitMinutes', 'viceApps'])
+        && (!('displayName' in request.resource.data)
+             || request.resource.data.displayName == null
+             || (request.resource.data.displayName is string
+                 && request.resource.data.displayName.size() <= 50));
+    }
+
+    match /usageStats/{uid}/{document=**} {
+      allow read, write: if isUser(uid);
+    }
+
+    match /extensionRequests/{requestId} {
+      allow read: if request.auth != null
+        && (request.auth.uid == resource.data.requesterId
+            || request.auth.uid == resource.data.partnerId);
+    }
+
+    match /wellnessTokens/{token} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+  }
+}

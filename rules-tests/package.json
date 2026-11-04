@@ -1,0 +1,13 @@
+{
+  "name": "conscience-rules-tests",
+  "private": true,
+  "description": "Tests that need the Firestore emulator. Requires Java 21 or newer.",
+  "scripts": {
+    "test": "npm --prefix ../functions run build && firebase emulators:exec --only firestore --project demo-conscience \"node --test --test-concurrency=1\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.2.0",
+    "firebase-tools": "^15.35.0"
+  }
+}

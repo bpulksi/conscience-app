@@ -12,16 +12,12 @@ class PartnerService {
 
   // ── Linking ──────────────────────────────────────────────────────────────
 
-  /// Generate a one-time invite code stored in Firestore.
+  /// Get a one-time invite code that expires after 24 hours.
+  /// Replaces any unused code this user already has.
   Future<String> generateInviteCode() async {
-    final uid = _uid!;
-    final code = uid.substring(0, 8).toUpperCase();
-    await _firestore.collection('inviteCodes').doc(code).set({
-      'uid': uid,
-      'createdAt': FieldValue.serverTimestamp(),
-      'used': false,
-    });
-    return code;
+    final callable = _functions.httpsCallable('createInviteCode');
+    final result = await callable.call({});
+    return result.data['code'] as String;
   }
 
   /// Link to a partner via their invite code.
@@ -62,10 +58,8 @@ class PartnerService {
 
   /// Approve or deny an extension request.
   Future<void> respondToRequest(String requestId, bool approved) async {
-    await _firestore.collection('extensionRequests').doc(requestId).update({
-      'status': approved ? 'approved' : 'denied',
-      'respondedAt': FieldValue.serverTimestamp(),
-    });
+    final callable = _functions.httpsCallable('respondToExtension');
+    await callable.call({'requestId': requestId, 'approved': approved});
   }
 
   /// Stream for the requesting user to wait for partner response.

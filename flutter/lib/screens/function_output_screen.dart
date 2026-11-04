@@ -22,12 +22,16 @@ class _FunctionOutputScreenState extends State<FunctionOutputScreen> {
 
   final _inviteCodeController = TextEditingController();
 
+  String? _sessionToken;
+
+  FunctionResult? _startResult;
   FunctionResult? _claimResult;
   FunctionResult? _requestExtResult;
   FunctionResult? _linkResult;
   FunctionResult? _unlinkResult;
   FunctionResult? _inviteResult;
 
+  bool _startLoading = false;
   bool _claimLoading = false;
   bool _extLoading = false;
   bool _linkLoading = false;
@@ -36,14 +40,45 @@ class _FunctionOutputScreenState extends State<FunctionOutputScreen> {
 
   // ── Wellness ─────────────────────────────────────────────────────────────
 
+  Future<void> _startWellness() async {
+    setState(() => _startLoading = true);
+    try {
+      final token = await _wellness.startSession(WellnessSessionType.meditation);
+      setState(() {
+        _sessionToken = token;
+        _startResult = FunctionResult.success(
+          label: 'startWellnessSession',
+          output: 'Session started. Claim after 9.5 minutes.',
+        );
+      });
+    } on FirebaseFunctionsException catch (e) {
+      setState(() => _startResult = FunctionResult.failure(
+            label: 'startWellnessSession',
+            error: '[${e.code}] ${e.message}',
+          ));
+    } catch (e) {
+      setState(() => _startResult = FunctionResult.failure(
+            label: 'startWellnessSession',
+            error: e.toString(),
+          ));
+    } finally {
+      setState(() => _startLoading = false);
+    }
+  }
+
   Future<void> _claimWellness() async {
+    final token = _sessionToken;
+    if (token == null) {
+      setState(() => _claimResult = const FunctionResult.failure(
+            label: 'claimWellnessReward',
+            error: 'Start a session first',
+          ));
+      return;
+    }
+
     setState(() => _claimLoading = true);
     try {
-      final token = await _wellness.issueSessionToken(WellnessSessionType.meditation);
-      final coins = await _wellness.claimReward(
-        type: WellnessSessionType.meditation,
-        sessionToken: token,
-      );
+      final coins = await _wellness.claimReward(sessionToken: token);
       setState(() => _claimResult = FunctionResult.success(
             label: 'claimWellnessReward',
             output: '+$coins coins awarded',
@@ -177,6 +212,13 @@ class _FunctionOutputScreenState extends State<FunctionOutputScreen> {
           // ── Wellness ───────────────────────────────────────────────────────
           _SectionHeader(title: 'Wellness'),
           _ActionTile(
+            label: 'Start Meditation Session',
+            subtitle: 'startWellnessSession (meditation)',
+            loading: _startLoading,
+            onTap: _startWellness,
+          ),
+          FunctionResultCard(result: _startResult),
+          _ActionTile(
             label: 'Claim Meditation Reward',
             subtitle: 'claimWellnessReward (meditation → 50 coins)',
             loading: _claimLoading,
@@ -190,7 +232,7 @@ class _FunctionOutputScreenState extends State<FunctionOutputScreen> {
           _SectionHeader(title: 'Partner Linking'),
           _ActionTile(
             label: 'Generate Invite Code',
-            subtitle: 'Writes a one-time code to Firestore',
+            subtitle: 'createInviteCode',
             loading: _inviteLoading,
             onTap: _generateInvite,
           ),
