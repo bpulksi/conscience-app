@@ -63,14 +63,20 @@ class NativeBridge {
     });
   }
 
-  /// Grant a temporary extension (called after friend approves request).
+  /// Today's usage and limits, in minutes.
+  Future<UsageStatus> getUsageStatus() async {
+    final map = await _channel.invokeMapMethod<String, dynamic>('getUsageStatus');
+    return UsageStatus.fromMap(map ?? const {});
+  }
+
+  /// Adds earned time to today's limit.
   Future<void> grantExtension({int durationMinutes = 10}) async {
     await _channel.invokeMethod('grantExtension', {
       'durationMinutes': durationMinutes,
     });
   }
 
-  /// Lift all blocks (called after a wellness session completes).
+  /// Clears today's usage and earned time. Only used by the test controls.
   Future<void> resetBlock() async {
     await _channel.invokeMethod('resetBlock');
   }
@@ -109,5 +115,26 @@ class NativeBridge {
 }
 
 enum AvatarStage { zen, impatient, furious }
+
+class UsageStatus {
+  final int usedMinutes;
+  final int dailyLimitMinutes;
+  final int earnedMinutes;
+
+  const UsageStatus({
+    required this.usedMinutes,
+    required this.dailyLimitMinutes,
+    required this.earnedMinutes,
+  });
+
+  factory UsageStatus.fromMap(Map<String, dynamic> map) {
+    int minutes(String key) => ((map[key] as num?) ?? 0) ~/ 60000;
+    return UsageStatus(
+      usedMinutes: minutes('usedMs'),
+      dailyLimitMinutes: minutes('dailyLimitMs'),
+      earnedMinutes: minutes('bonusMs'),
+    );
+  }
+}
 
 enum PermissionStatus { granted, needsSettings, denied }

@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -21,14 +22,35 @@ class MainActivity : FlutterActivity() {
     companion object {
         const val CHANNEL = "conscience/screenTime"
         const val EVENTS = "conscience/avatarEvents"
+        const val EXTRA_DEEP_LINK = "deeplink"
+        const val DEEP_LINK_RECHARGE = "rechargeHub"
+        const val PREFS_SETTINGS = "conscience_prefs"
+        const val KEY_TOUGH_LOVE = "toughLove"
     }
 
     private var eventSink: EventChannel.EventSink? = null
     private val handler = Handler(Looper.getMainLooper())
     private var avatarReceiver: BroadcastReceiver? = null
+    private var pendingDeepLink: String? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        captureDeepLink(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        captureDeepLink(intent)
+    }
+
+    private fun captureDeepLink(intent: Intent?) {
+        intent?.getStringExtra(EXTRA_DEEP_LINK)?.let { pendingDeepLink = it }
+        intent?.removeExtra(EXTRA_DEEP_LINK)
+    }
 
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
+        ConscienceAccessibilityService.loadConfig(applicationContext)
 
         // Avatar picker behind the Cast screen
         AvatarChannel.register(engine.dartExecutor.binaryMessenger, applicationContext)
@@ -48,7 +70,11 @@ class MainActivity : FlutterActivity() {
                         handleGrantExtension(args, result)
                     }
                     "resetBlock" -> handleResetBlock(result)
-                    "consumePendingDeepLink" -> result.success(null)
+                    "getUsageStatus" -> handleGetUsageStatus(result)
+                    "consumePendingDeepLink" -> {
+                        result.success(pendingDeepLink)
+                        pendingDeepLink = null
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -86,7 +112,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun handleRequestPermissions(result: MethodChannel.Result) {
-        val granted = checkAccessibilityPermission() && checkOverlayPermission()
+        val granted = checkAccessibilityPermission()
         val status =
             when {
                 granted -> "granted"
@@ -101,21 +127,7 @@ class MainActivity : FlutterActivity() {
         return services.any { it.id.contains("com.conscience.app") }
     }
 
-    private fun checkOverlayPermission(): Boolean =
-        android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M ||
-            Settings.canDrawOverlays(this)
-
     private fun handleOpenPermissionSettings(result: MethodChannel.Result) {
-        // Overlay first, then accessibility
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M &&
-            !Settings.canDrawOverlays(this)
-        ) {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-            intent.data = android.net.Uri.parse("package:$packageName")
-            startActivity(intent)
-        }
-
-        // Accessibility settings
         val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
         startActivity(intent)
         result.success(null)
@@ -127,8 +139,12 @@ class MainActivity : FlutterActivity() {
         val dailyLimitMinutes = (args["dailyLimitMinutes"] as? Number)?.toLong() ?: 60
         val dailyLimitMs = dailyLimitMinutes * 60 * 1000
 
-        ConscienceAccessibilityService.viceApps = packageNames
-        ConscienceAccessibilityService.dailyLimitMs = dailyLimitMs
+        val toughLove = args["toughLove"] as? Boolean ?: false
+
+        ConscienceAccessibilityService.saveConfig(applicationContext, packageNames, dailyLimitMs)
+        getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_TOUGH_LOVE, toughLove)
+            .apply()
 
         Log.d("MainActivity", "Monitoring config: $dailyLimitMinutes min, $packageNames")
         result.success(null)
@@ -138,19 +154,29 @@ class MainActivity : FlutterActivity() {
         val durationMinutes = (args["durationMinutes"] as? Number)?.toLong() ?: 10
         val durationMs = durationMinutes * 60 * 1000
 
-        // Signal to accessibility service to lift block temporarily
+        UsageTracker.get(applicationContext).grant(durationMs)
         val intent = Intent(ConscienceAccessibilityService.ACTION_GRANT_EXT)
-        intent.putExtra("durationMs", durationMs)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
 
         result.success(null)
     }
 
     private fun handleResetBlock(result: MethodChannel.Result) {
-        // Reset usage counter and dismiss overlay
+        UsageTracker.get(applicationContext).resetToday()
         val intent = Intent(ConscienceAccessibilityService.ACTION_RESET)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
         result.success(null)
+    }
+
+    private fun handleGetUsageStatus(result: MethodChannel.Result) {
+        val tracker = UsageTracker.get(applicationContext)
+        result.success(
+            mapOf(
+                "usedMs" to tracker.usedMs(),
+                "dailyLimitMs" to ConscienceAccessibilityService.dailyLimitMs,
+                "bonusMs" to tracker.bonusMs()
+            )
+        )
     }
 
     override fun onDestroy() {

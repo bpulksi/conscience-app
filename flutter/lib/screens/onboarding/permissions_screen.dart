@@ -59,7 +59,9 @@ class _PermissionsScreenState extends State<PermissionsScreen>
         content: const Text(
           'Conscience needs to observe which apps you open so it can step in '
           'when you hit your daily limit. Grant the Accessibility permission '
-          '(or Screen Time on iOS) in the next screen, then return here.',
+          'in the next screen, then return here. If the switch is greyed out, '
+          'open Settings > Apps > Conscience, tap the menu and choose '
+          '"Allow restricted settings" first.',
         ),
         actions: [
           TextButton(

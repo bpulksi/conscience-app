@@ -69,6 +69,8 @@ dependencies {
 
     // Lottie
     implementation "com.airbnb.android:lottie:6.3.0"
+
+    testImplementation "junit:junit:4.13.2"
 }
 
 flutter {

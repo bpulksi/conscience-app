@@ -6,6 +6,7 @@ on:
       - main
       - claude/conscience-app-progress-dymqf
       - integrate/android-app
+      - feature/block-loop
       - avatar-layer
   workflow_dispatch:
 
@@ -131,6 +132,18 @@ jobs:
         with:
           name: app-release
           path: flutter/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Run Android unit tests
+        run: |
+          cd flutter/android
+          set +e
+          ./gradlew :app:testReleaseUnitTest --console=plain 2>&1 | tee test.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            summary="$(grep -E -A3 'FAILED|What went wrong|^e: ' test.log | head -40 | cut -c1-300 | sed ':a;N;$!ba;s/\n/%0A/g')"
+            echo "::error title=Android unit tests::$summary"
+          fi
+          exit "$code"
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -16,12 +16,38 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  static const _rechargeTab = 1;
+
+  final _bridge = NativeBridge();
   int _tab = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _openDeepLink();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _openDeepLink();
+  }
+
+  /// The block screen's button sends the person straight to Recharge.
+  Future<void> _openDeepLink() async {
+    final link = await _bridge.consumePendingDeepLink();
+    if (link == 'rechargeHub' && mounted) setState(() => _tab = _rechargeTab);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final tabs = const [_TodayTab(), _RechargeTab(), _PartnersTab()];
     return Scaffold(
       appBar: AppBar(
         title: const Text('Conscience'),
@@ -42,7 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: tabs[_tab],
+      // IndexedStack keeps a running session's timer alive across tab switches.
+      body: IndexedStack(
+        index: _tab,
+        children: const [_TodayTab(), _RechargeTab(), _PartnersTab()],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
@@ -65,22 +95,63 @@ class _TodayTab extends StatefulWidget {
   State<_TodayTab> createState() => _TodayTabState();
 }
 
-class _TodayTabState extends State<_TodayTab> {
+class _TodayTabState extends State<_TodayTab> with WidgetsBindingObserver {
   final _bridge = NativeBridge();
   int _dailyLimit = 60;
   bool _toughLove = false;
+  UsageStatus? _usage;
+  Timer? _refresh;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadUsage(syncLimit: true);
+    _refresh = Timer.periodic(const Duration(seconds: 30), (_) => _loadUsage());
+  }
+
+  @override
+  void dispose() {
+    _refresh?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadUsage();
+  }
+
+  Future<void> _loadUsage({bool syncLimit = false}) async {
+    final usage = await _bridge.getUsageStatus();
+    if (!mounted) return;
+    setState(() {
+      _usage = usage;
+      if (syncLimit) _dailyLimit = usage.dailyLimitMinutes;
+    });
+  }
+
+  /// For trying the full loop on a phone. Remove before release.
+  Future<void> _useTestLimit() async {
+    setState(() => _dailyLimit = 2);
+    await _bridge.resetBlock();
+    await _configure();
+  }
 
   Future<void> _configure() async {
     await _bridge.configureMonitoring(
       packageNames: const [
         'com.instagram.android',
         'com.zhiliaoapp.musically',
+        'com.twitter.android',
         'com.google.android.youtube',
+        'com.reddit.frontpage',
       ],
       bundleIds: const [],
       dailyLimitMinutes: _dailyLimit,
       toughLove: _toughLove,
     );
+    await _loadUsage();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Monitoring set to $_dailyLimit min / day')),
@@ -89,7 +160,8 @@ class _TodayTabState extends State<_TodayTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final usage = _usage;
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -112,14 +184,21 @@ class _TodayTabState extends State<_TodayTab> {
               );
             },
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
+          if (usage != null)
+            Text(
+              'Used ${usage.usedMinutes} of '
+              '${usage.dailyLimitMinutes + usage.earnedMinutes} min today'
+              '${usage.earnedMinutes > 0 ? ' (${usage.earnedMinutes} earned)' : ''}',
+            ),
+          const SizedBox(height: 16),
           Text('Daily limit: $_dailyLimit minutes',
               style: Theme.of(context).textTheme.titleSmall),
           Slider(
             min: 15,
             max: 240,
             divisions: 15,
-            value: _dailyLimit.toDouble(),
+            value: _dailyLimit.clamp(15, 240).toDouble(),
             label: '$_dailyLimit min',
             onChanged: (v) => setState(() => _dailyLimit = v.toInt()),
           ),
@@ -136,6 +215,11 @@ class _TodayTabState extends State<_TodayTab> {
               onPressed: _configure,
               child: const Text('Save monitoring settings'),
             ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _useTestLimit,
+            child: const Text('Test: reset today and use a 2-minute limit'),
           ),
         ],
       ),
@@ -206,9 +290,11 @@ class _RechargeTabState extends State<_RechargeTab> {
     setState(() => _status = 'Claiming reward…');
     try {
       final coins = await _wellness.claimReward(sessionToken: token);
-      await _bridge.resetBlock();
+      // Only after the server accepts the session.
+      await _bridge.grantExtension(durationMinutes: type.earnedMinutes);
       if (!mounted) return;
-      setState(() => _status = '+$coins coins — block lifted');
+      setState(() => _status =
+          '+$coins coins and ${type.earnedMinutes} more minutes today');
     } on FirebaseFunctionsException catch (e) {
       setState(() => _status = 'Reward failed: [${e.code}] ${e.message}');
     } catch (e) {
@@ -241,7 +327,7 @@ class _RechargeTabState extends State<_RechargeTab> {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Text('Recharge to earn coins',
+        Text('Recharge to earn time',
             style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         for (final type in WellnessSessionType.values)
@@ -250,7 +336,7 @@ class _RechargeTabState extends State<_RechargeTab> {
               leading: const Icon(Icons.self_improvement_rounded),
               title: Text(type.label[0].toUpperCase() + type.label.substring(1)),
               subtitle: Text(
-                '${(type.durationSeconds / 60).round()} min · +${type.coinReward} coins',
+                '${(type.durationSeconds / 60).round()} min · +${type.earnedMinutes} min of screen time',
               ),
               trailing: FilledButton(
                 onPressed: () => _start(type),

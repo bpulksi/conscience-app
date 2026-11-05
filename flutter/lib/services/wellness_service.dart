@@ -26,6 +26,18 @@ extension WellnessSessionTypeExt on WellnessSessionType {
     }
   }
 
+  /// Screen time a finished session earns back.
+  int get earnedMinutes {
+    switch (this) {
+      case WellnessSessionType.breathwork:
+        return 10;
+      case WellnessSessionType.meditation:
+        return 20;
+      case WellnessSessionType.yoga:
+        return 30;
+    }
+  }
+
   int get coinReward {
     switch (this) {
       case WellnessSessionType.breathwork:
