@@ -91,6 +91,9 @@ jobs:
             exit 1
           }
 
+      - name: Generate Firebase settings
+        run: node .github/scripts/write-firebase-options.js flutter/android/app/google-services.json flutter/lib/firebase_options.dart
+
       - name: Get Flutter dependencies
         run: |
           cd flutter

@@ -11,7 +11,7 @@ This repository is now a fully scaffolded Flutter app with native Android and iO
 ```bash
 cd flutter
 flutter pub get
-flutterfire configure --project=conscience-62d8b
+flutterfire configure --project=conscience-fbaf1
 ```
 
 This command:
@@ -309,4 +309,4 @@ A: All usage data stays on-device until the user explicitly claims a wellness re
 
 ---
 
-**Scaffolding completed on Apr 14, 2026 with Firebase project `conscience-62d8b`.**
+**Scaffolding completed on Apr 14, 2026 with Firebase project `conscience-fbaf1`.**
