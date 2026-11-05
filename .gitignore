@@ -19,7 +19,6 @@ google-services.json
 GoogleService-Info.plist
 .env
 .env.*
-firebase_options.dart
 
 # OS
 .DS_Store

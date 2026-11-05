@@ -13,6 +13,7 @@ import com.airbnb.lottie.LottieAnimationView
 class OverlayManager(private val context: Context) {
 
     private var overlayView: View? = null
+    private var currentAsset: String? = null
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
     // Track drag position so user can reposition the avatar
@@ -58,7 +59,8 @@ class OverlayManager(private val context: Context) {
             AvatarStage.IMPATIENT -> "avatars/brain/impatient.json"
             AvatarStage.FURIOUS -> "avatars/brain/furious.json"
         }
-        if (lottie.animationResName != assetName) {
+        if (currentAsset != assetName) {
+            currentAsset = assetName
             lottie.setAnimation(assetName)
             lottie.playAnimation()
         }
@@ -87,6 +89,7 @@ class OverlayManager(private val context: Context) {
         overlayView?.let {
             windowManager.removeView(it)
             overlayView = null
+            currentAsset = null
         }
     }
 }
