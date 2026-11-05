@@ -51,13 +51,14 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          set -uo pipefail
+          # Not -e: a failed decode must reach the validity check below.
+          set +e
           target=flutter/android/app/keystore.jks
           secret="$(printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]')"
           # Check for hex first: hex text is also valid base64, and decodes to garbage.
           if printf '%s' "$secret" | grep -Eq '^[0-9a-fA-F]+$'; then
             format=hex
-            printf '%s' "$secret" | xxd -r -p > "$target"
+            printf '%s' "$secret" | python3 -c 'import binascii,sys; sys.stdout.buffer.write(binascii.unhexlify(sys.stdin.read()))' > "$target"
           else
             format=base64
             printf '%s' "$secret" | base64 -d > "$target" 2>/dev/null
