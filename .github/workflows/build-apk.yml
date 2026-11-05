@@ -48,17 +48,30 @@ jobs:
       - name: Write keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          set -euo pipefail
-          if printf '%s' "$KEYSTORE_BASE64" | base64 -d > flutter/android/app/keystore.jks 2>/dev/null; then
-            echo "Keystore decoded from base64"
+          set -uo pipefail
+          target=flutter/android/app/keystore.jks
+          secret="$(printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]')"
+          # Check for hex first: hex text is also valid base64, and decodes to garbage.
+          if printf '%s' "$secret" | grep -Eq '^[0-9a-fA-F]+$'; then
+            format=hex
+            printf '%s' "$secret" | xxd -r -p > "$target"
           else
-            printf '%s' "$KEYSTORE_BASE64" | xxd -r -p > flutter/android/app/keystore.jks || {
-              echo "::error::Failed to decode KEYSTORE_BASE64"
-              exit 1
-            }
+            format=base64
+            printf '%s' "$secret" | base64 -d > "$target" 2>/dev/null
           fi
-          ls -lh flutter/android/app/keystore.jks
+          details="format=$format size=$(wc -c < "$target") starts_with=$(od -An -tx1 -N4 "$target" | tr -d ' ')"
+          if keytool -list -keystore "$target" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "Keystore is valid ($details)"
+          elif [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            echo "::error title=Keystore::Keystore secrets are invalid, so main can't be release-signed ($details)"
+            exit 1
+          else
+            rm -f "$target"
+            echo "::warning title=Keystore::Keystore secrets are invalid, so this APK is debug-signed ($details)"
+          fi
 
       - name: Write google-services.json
         env:

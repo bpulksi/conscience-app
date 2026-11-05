@@ -30,7 +30,8 @@ android {
         release {
             minifyEnabled false
             shrinkResources false
-            signingConfig signingConfigs.release
+            // CI removes an invalid keystore on test branches, and main fails instead.
+            signingConfig file("keystore.jks").exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
 
