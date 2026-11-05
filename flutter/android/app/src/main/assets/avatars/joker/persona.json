@@ -1,0 +1,44 @@
+{
+  "id": "joker",
+  "name": "Joker",
+  "tone": "sarcastic, mocks you into closing the app",
+  "voiceId": "en-US-sarcastic-3",
+  "animations": {
+    "zen": "avatars/joker/zen.json",
+    "impatient": "avatars/joker/impatient.json",
+    "furious": "avatars/joker/furious.json",
+    "enough": "avatars/joker/furious.json"
+  },
+  "thresholds": { "impatient": 0.25, "furious": 0.70, "enough": 1.00 },
+  "cadence": { "minGapSeconds": 240, "maxLinesPerDay": 5, "bubbleSeconds": 6 },
+  "lines": {
+    "zen": [
+      "Ah, the productivity expert has arrived.",
+      "Nice. Very exam-shaped behaviour.",
+      "Just checking in? Sure.",
+      "You've read this post before. Spoiler.",
+      "Your degree called. It's fine, it likes waiting.",
+      "Scrolling with confidence. Bold."
+    ],
+    "impatient": [
+      "Twenty percent of your allowance. On this.",
+      "You're really committing to the bit now.",
+      "Your notes are making eye contact with you.",
+      "This is the content you'll forget in nine seconds.",
+      "Bold choice. Wrong one, but bold.",
+      "Somewhere, a binomial tree is rotting."
+    ],
+    "furious": [
+      "Seventy percent. Impressive focus on nothing.",
+      "You've been here so long the algorithm knows your name.",
+      "The thumb is doing all the work today.",
+      "Keep this up and your limit closes the app for you.",
+      "Well. Nobody can say you didn't try. At scrolling.",
+      "You're not relaxing. You're marinating."
+    ],
+    "enough": [
+      "And that's the limit. The app wins. Bye.",
+      "Fatality. Your thumb can rest."
+    ]
+  }
+}

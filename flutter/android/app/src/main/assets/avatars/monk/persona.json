@@ -1,0 +1,43 @@
+{
+  "id": "monk",
+  "name": "Monk",
+  "tone": "calm, one reflective question, slow to speak",
+  "voiceId": "en-GB-calm-2",
+  "animations": {
+    "zen": "avatars/monk/zen.json",
+    "impatient": "avatars/monk/impatient.json",
+    "furious": "avatars/monk/furious.json",
+    "enough": "avatars/monk/furious.json"
+  },
+  "thresholds": { "impatient": 0.35, "furious": 0.80, "enough": 1.00 },
+  "cadence": { "minGapSeconds": 600, "maxLinesPerDay": 3, "bubbleSeconds": 6 },
+  "lines": {
+    "zen": [
+      "What were you looking for here?",
+      "Notice the hand that opened it.",
+      "Ten minutes can be a choice.",
+      "Is this rest, or is this leaving?",
+      "You came for a reason. What was it?",
+      "Nothing on this screen is urgent."
+    ],
+    "impatient": [
+      "What are you avoiding by staying?",
+      "Is this the tiredness, or the escape?",
+      "Ask yourself honestly: rest or delay?",
+      "What would the next hour look like if you closed it?",
+      "This is not helping you rest.",
+      "You can stop without finishing."
+    ],
+    "furious": [
+      "You already know how this ends. Close it.",
+      "The hour is gone. Don't spend the next one.",
+      "Put it down and breathe once, slowly.",
+      "Let this be the last thing you open today.",
+      "You are allowed to leave it unfinished.",
+      "The screen will still be here tomorrow."
+    ],
+    "enough": [
+      "Enough. Sit with the quiet for a moment."
+    ]
+  }
+}

@@ -1,15 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Overlay v2: avatar plus a speech bubble.
+     The bubble is not clickable, so touches fall through to the drag area
+     (long-drag moves the avatar, a tap mutes it for 30 minutes). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="80dp"
-    android:layout_height="80dp">
+    android:id="@+id/avatar_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
-    <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/avatar_lottie"
+    <TextView
+        android:id="@+id/avatar_bubble"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxWidth="200dp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:layout_marginBottom="6dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:background="@drawable/avatar_bubble_bg"
+        android:textColor="#FFFFFFFF"
+        android:textSize="13sp"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone" />
+
+    <FrameLayout
+        android:id="@+id/avatar_drag_area"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        app:lottie_autoPlay="true"
-        app:lottie_loop="true"
-        app:lottie_fileName="avatars/brain/zen.json" />
+        android:background="@android:color/transparent">
 
-</FrameLayout>
+        <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/avatar_lottie"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            app:lottie_autoPlay="true"
+            app:lottie_loop="true"
+            app:lottie_fileName="avatars/brain/zen.json" />
+
+    </FrameLayout>
+
+</LinearLayout>

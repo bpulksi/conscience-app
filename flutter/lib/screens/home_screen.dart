@@ -4,6 +4,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
 import '../services/native_bridge.dart';
+import 'avatar_cast_screen.dart';
 import '../services/partner_service.dart';
 import '../services/wellness_service.dart';
 import '../widgets/avatar_view.dart';
@@ -28,8 +29,14 @@ class _HomeScreenState extends State<HomeScreen> {
           PopupMenuButton<String>(
             onSelected: (v) {
               if (v == 'dev') Navigator.of(context).pushNamed('/dev');
+              if (v == 'cast') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AvatarCastScreen()),
+                );
+              }
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(value: 'cast', child: Text('Choose avatar')),
               PopupMenuItem(value: 'dev', child: Text('Dev tools')),
             ],
           ),

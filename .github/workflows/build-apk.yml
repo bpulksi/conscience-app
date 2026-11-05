@@ -6,6 +6,7 @@ on:
       - main
       - claude/conscience-app-progress-dymqf
       - integrate/android-app
+      - avatar-layer
   workflow_dispatch:
 
 jobs:

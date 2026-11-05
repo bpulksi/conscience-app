@@ -30,6 +30,9 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
 
+        // Avatar picker behind the Cast screen
+        AvatarChannel.register(engine.dartExecutor.binaryMessenger, applicationContext)
+
         // MethodChannel for imperative calls
         MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->

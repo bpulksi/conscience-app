@@ -1,0 +1,44 @@
+{
+  "id": "coach",
+  "name": "Coach",
+  "tone": "firm, short sentences, escalates fast",
+  "voiceId": "en-US-firm-1",
+  "animations": {
+    "zen": "avatars/coach/zen.json",
+    "impatient": "avatars/coach/impatient.json",
+    "furious": "avatars/coach/furious.json",
+    "enough": "avatars/coach/furious.json"
+  },
+  "thresholds": { "impatient": 0.20, "furious": 0.60, "enough": 1.00 },
+  "cadence": { "minGapSeconds": 180, "maxLinesPerDay": 6, "bubbleSeconds": 6 },
+  "lines": {
+    "zen": [
+      "Warming up. Keep it short.",
+      "This is fine. Don't settle in.",
+      "One clip, then out.",
+      "You're on the clock. Use it.",
+      "Nothing here you need.",
+      "Two minutes is a visit. Ten is a habit."
+    ],
+    "impatient": [
+      "That's a fifth of your day. Close it.",
+      "You said five minutes. It's been more.",
+      "Put it down and walk.",
+      "Nobody is watching this but you.",
+      "Do the thing you're avoiding.",
+      "You're scrolling, not resting."
+    ],
+    "furious": [
+      "Enough. Put the phone down.",
+      "Out. Now.",
+      "You're burning your own time.",
+      "Close it and don't come back today.",
+      "This is the pattern you said you'd break.",
+      "Stop. Stand up. Leave the phone."
+    ],
+    "enough": [
+      "Limit hit. Handled.",
+      "Done for today. Go do the real work."
+    ]
+  }
+}

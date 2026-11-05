@@ -87,6 +87,10 @@ class NativeBridge {
         return AvatarStage.impatient;
       case 'FURIOUS':
         return AvatarStage.furious;
+      // ENOUGH means the limit was reached. The Dart enum stays three-valued so
+      // existing charts keep working.
+      case 'ENOUGH':
+        return AvatarStage.furious;
       default:
         return AvatarStage.zen;
     }
